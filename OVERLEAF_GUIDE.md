@@ -19,14 +19,14 @@ Este es el método más rápido y no requiere ninguna configuración previa:
 
 ---
 
-## 🔄 Método 2: Sincronización directa con GitHub
+## 🔄 Método 2: Sincronización directa con GitHub (Rama `paper`)
 
 Si tienes cuenta de Overleaf con integración de GitHub:
 
 1. En Overleaf, pulsa **"New Project"** → **"Import from GitHub"**.
 2. Selecciona el repositorio: `joorgecamacho/smart-luggage-iot`.
-3. Overleaf clonará el repositorio.
-4. Cada cambio que hagáis en Overleaf podéis sincronizarlo con GitHub usando el menú **"Git"** en la barra superior de Overleaf.
+3. Selecciona la rama **`paper`** (que es donde se trabaja exclusivamente el informe).
+4. Cada cambio que hagáis en Overleaf podéis sincronizarlo con GitHub usando el menú **"Git"** en la barra superior de Overleaf hacia la rama `paper`.
 5. Los cambios que se hagan en GitHub podréis descargarlos a Overleaf con el botón **"Pull changes into Overleaf"**.
 
 ---

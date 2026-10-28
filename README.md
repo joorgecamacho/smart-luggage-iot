@@ -71,7 +71,7 @@ smart-luggage-iot/
 ├── OVERLEAF_GUIDE.md              # Detailed manual for team collaboration in Overleaf
 ├── paper.zip                      # Standalone Overleaf compilation package
 ├── .gitignore                     # Git ignore rules for embedded, python, LaTeX & OS
-├── paper/                         # Full LaTeX paper source directory
+├── paper/                         # Full LaTeX paper source directory (Branch: paper)
 │   ├── IEEEtran.cls               # IEEE official conference document class
 │   ├── main.tex                   # Technical report master file with all required sections
 │   ├── overleaf_workflow_guide.tex # Companion paper on Overleaf collaborative workflows
@@ -82,13 +82,25 @@ smart-luggage-iot/
 │       ├── fig2_app_flowchart.pdf / .png
 │       └── fig3_state_machine.pdf / .png
 ├── docs/                          # Additional project specifications & documentation
-└── src/                           # Source code folder (ready for ESP32 firmware & cloud integration)
+└── src/                           # Source code folder (Branch: dev)
     └── .gitkeep
 ```
 
 ---
 
-## 👥 6. Team & Deliverables Roadmap
+## 🌿 6. Estrategia de Ramas (Git Branching Workflow)
+
+El equipo trabaja con ramas dedicadas para aislar el desarrollo de software y la redacción académica:
+
+| Rama | Propósito | Contenido |
+| :--- | :--- | :--- |
+| **`paper`** | **Redacción del Paper e Informe Técnico**: Todo el trabajo en LaTeX, inclusión de figuras, citas BibTeX y sincronización con Overleaf. | `paper/`, `figures/`, `paper.zip` |
+| **`dev`** | **Desarrollo de Código**: Firmware del ESP32-S2, librerías, drivers RFID, lectura ADC, scripts MQTT y microservicios cloud. | `src/`, scripts, dashboards |
+| **`main`** | **Versión Estable / Entregas**: Rama protegida que integra los hitos estables y consolidados para la entrega final del curso. | Versión lista para calificar |
+
+---
+
+## 👥 7. Team & Deliverables Roadmap
 
 - [x] Initial repository setup & requirements alignment
 - [x] IEEE LaTeX Technical Report structure & section templates (`paper/`)
