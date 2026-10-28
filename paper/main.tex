@@ -26,23 +26,26 @@
 \title{Final Technical Report: AeroTrack IoT\\Smart RFID Baggage Tracking and Automated Cargo Hold Reconciliation System}
 
 \author{
+    \IEEEauthorblockN{Oscar Salueña Pujolràs}
+    \IEEEauthorblockA{\textit{NIA: 285547} \\
+    \textit{Dept. of Information and Communication Technologies} \\
+    \textit{Universitat Pompeu Fabra (UPF)}\\
+    Barcelona, Spain \\
+    oscar.saluena01@estudiant.upf.edu}
+    \and
     \IEEEauthorblockN{Jorge Camacho Camacho}
-    \IEEEauthorblockA{\textit{Dept. of Information and Communication Technologies} \\
+    \IEEEauthorblockA{\textit{NIA: 266986} \\
+    \textit{Dept. of Information and Communication Technologies} \\
     \textit{Universitat Pompeu Fabra (UPF)}\\
     Barcelona, Spain \\
     jorge.camacho01@estudiant.upf.edu}
     \and
-    \IEEEauthorblockN{Author Two}
-    \IEEEauthorblockA{\textit{Dept. of Information and Communication Technologies} \\
+    \IEEEauthorblockN{Miguel Rando Ramirez}
+    \IEEEauthorblockA{\textit{NIA: 253182} \\
+    \textit{Dept. of Information and Communication Technologies} \\
     \textit{Universitat Pompeu Fabra (UPF)}\\
     Barcelona, Spain \\
-    author2@estudiant.upf.edu}
-    \and
-    \IEEEauthorblockN{Author Three}
-    \IEEEauthorblockA{\textit{Dept. of Information and Communication Technologies} \\
-    \textit{Universitat Pompeu Fabra (UPF)}\\
-    Barcelona, Spain \\
-    author3@estudiant.upf.edu}
+    miguel.rando01@estudiant.upf.edu}
 }
 
 \maketitle
@@ -62,34 +65,11 @@ Internet of Things, ESP32-S2, RFID, Baggage Tracking, Airline Cargo Hold, MQTT, 
 % SECTION 1: SYSTEM ARCHITECTURE
 % =========================================================================
 \section{System Architecture (devices, cloud services, software modules...)}
-The AeroTrack IoT platform is organized into three decoupled, complementary tiers: Edge Hardware, Transport/Network, and Cloud Services, as illustrated in Fig.~\ref{fig:architecture}.
-
-\subsection{Edge Hardware Layer}
-The physical prototyping node is anchored by the \textbf{Espressif ESP32-S2} system-on-chip (SoC), featuring a 240\,MHz 32-bit Xtensa single-core processor with integrated 2.4\,GHz Wi-Fi (802.11 b/g/n) and native cryptographic hardware acceleration. Peripheral peripherals include:
-\begin{itemize}
-    \item \textbf{RC522 RFID Transceiver}: Communicating over a 4-wire SPI bus at 13.56\,MHz, interrogating ISO/IEC 14443A passive smart luggage tags affixed to passenger bags.
-    \item \textbf{Signaling Actuators (RGB LEDs)}: Direct GPIO-driven visual indicators signaling loading state, reconciliation status, and routing alerts to ground baggage handlers.
-    \item \textbf{Analog Sensor Inputs (Potentiometers)}: Multiple 10\,k$\Omega$ linear potentiometers sampled via the 13-bit Successive Approximation Register (SAR) ADC channels (e.g., GPIO1/GPIO2), emulating conveyor belt velocity and cargo hold hatch angle sensors.
-\end{itemize}
-
-\subsection{Cloud Services Layer}
-The cloud backend incorporates an enterprise MQTT broker (e.g., Adafruit IO / ThingsBoard / Eclipse Mosquitto) paired with a reactive reconciliation microservice. The cloud engine maintains the dynamic flight baggage manifest, processes incoming edge telemetry, updates passenger-facing notifications, and publishes downlink supervisory commands back to the ESP32-S2 node.
-
-\subsection{Software Modules}
-Firmware execution on the ESP32-S2 is partitioned into asynchronous state tasks:
-\begin{enumerate}
-    \item \textit{Tag Interrogation Daemon}: Continuously polls the RC522 FIFO buffer with software anti-collision and UID debounce.
-    \item \textit{Telemetry and ADC Sampler}: Filters potentiometer readings with an exponential moving average (EMA) to prevent signal jitter.
-    \item \textit{Network and MQTT Manager}: Maintains automatic reconnect loops with exponential backoff and manages topic subscriptions.
-    \item \textit{Actuator Engine}: Drives deterministic LED blinking sequences according to local events and cloud commands.
-\end{enumerate}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figures/fig1_system_architecture.pdf}
-    \caption{Three-tier AeroTrack IoT System Architecture: Edge Hardware (ESP32-S2, RC522, LEDs, Potentiometers), Transport (MQTT/TLS), and Cloud IoT Platform.}
-    \label{fig:architecture}
-\end{figure}
+% TODO: A redactar y diseñar por el equipo (Oscar Saluena, Jorge Camacho, Miguel Rando).
+% En este apartado definireis la arquitectura de vuestro sistema:
+% 1. Dispositivos (devices): microcontrolador ESP32-S2, lector RFID RC522, conexionado y pines, LEDs, potenciometros.
+% 2. Servicios cloud (cloud services): broker MQTT, plataforma Cloud IoT (Adafruit IO / ThingsBoard / AWS IoT), almacenamiento y dashboards.
+% 3. Modulos de software (software modules): estructura de la arquitectura firmware, hilos/tareas asincronas, microservicios backend y APIs.
 
 % =========================================================================
 % SECTION 2: APP DESIGN

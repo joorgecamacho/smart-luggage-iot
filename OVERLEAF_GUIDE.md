@@ -1,6 +1,9 @@
 # Guía de Uso del Paper en Overleaf
 
-Esta guía explica paso a paso cómo abrir, editar y sincronizar el **Informe Técnico (Paper IEEE)** del proyecto **AeroTrack IoT** en **Overleaf** entre los 3 integrantes del equipo.
+Esta guía explica paso a paso cómo abrir, editar y sincronizar el **Informe Técnico (Paper IEEE)** del proyecto **AeroTrack IoT** en **Overleaf** para el equipo:
+- **Oscar Salueña Pujolràs** (NIA: 285547)
+- **Jorge Camacho Camacho** (NIA: 266986)
+- **Miguel Rando Ramirez** (NIA: 253182)
 
 ---
 
@@ -20,7 +23,7 @@ Este es el método más rápido y no requiere ninguna configuración previa:
 
 Si tienes cuenta de Overleaf con integración de GitHub:
 
-1. En Overleaf, pulsa **"New Project"** ➡️ **"Import from GitHub"**.
+1. En Overleaf, pulsa **"New Project"** → **"Import from GitHub"**.
 2. Selecciona el repositorio: `joorgecamacho/smart-luggage-iot`.
 3. Overleaf clonará el repositorio.
 4. Cada cambio que hagáis en Overleaf podéis sincronizarlo con GitHub usando el menú **"Git"** en la barra superior de Overleaf.
@@ -40,7 +43,6 @@ paper/
 ├── references.bib                 # Base de datos de referencias BibTeX (IATA, IoT, RFID, MQTT...)
 ├── Makefile                       # Script de compilación para terminal
 └── figures/                       # Figuras y diagramas de alta resolución
-    ├── fig1_system_architecture.pdf / .png # Arquitectura del sistema (ESP32-S2 + Cloud IoT)
     ├── fig2_app_flowchart.pdf / .png       # Diagrama de flujo de reconciliación de bodega
     └── fig3_state_machine.pdf / .png       # Máquina de estados del firmware
 ```
@@ -49,15 +51,13 @@ paper/
 
 ## 📑 Secciones del Technical Report (según los requisitos del curso)
 
-El archivo `main.tex` ya incluye los títulos exactos definidos para la entrega:
+El archivo `main.tex` incluye los títulos exactos definidos para la entrega:
 
 1. **Title**: `Final Technical Report: AeroTrack IoT -- Smart RFID Baggage Tracking and Automated Cargo Hold Reconciliation System`
-2. **Authors**: Jorge Camacho Camacho y los 2 compañeros de equipo (plantillas editables).
+2. **Authors**: Oscar Salueña Pujolràs (285547), Jorge Camacho Camacho (266986) y Miguel Rando Ramirez (253182).
 3. **Abstract & Keywords**: Resumen técnico de alto impacto con palabras clave.
 4. **Section 1: System Architecture (devices, cloud services, software modules...)**
-   - Descripción de hardware (ESP32-S2, RC522 RFID, LEDs, potenciómetros).
-   - Capa de transporte (MQTT sobre Wi-Fi).
-   - Servicios cloud (broker IoT, reconciliador de bodega, app de pasajeros).
+   - *A rellenar y diseñar por el equipo*: Dispositivos, servicios cloud y módulos de software.
 5. **Section 2: App design (flow diagrams, etc.)**
    - Flujo de operación paso a paso.
    - Máquina de estados finitos (FSM) de 5 estados.
@@ -67,12 +67,12 @@ El archivo `main.tex` ya incluye los títulos exactos definidos para la entrega:
 7. **Section 4: Code description**
    - Módulos de firmware: `RFID_Module`, `Sensor_Module`, `Actuator_Module`, `Cloud_Client`.
 8. **Section 5: Demo**
-   - Escenario de demostración en vivo (maleta correcta -> LED verde + suma en nube; maleta incorrecta -> LED rojo + alarma nube; potenciómetro -> velocidad/compuerta).
+   - Escenario de demostración en vivo (maleta correcta → LED verde + suma en nube; maleta incorrecta → LED rojo + alarma nube; potenciómetro → velocidad/compuerta).
 9. **Section 6: Issues and solutions**
    - Desafíos resueltos (colisiones RFID, calibración de ADC en ESP32-S2, reconexiones MQTT).
 10. **Section 7: Any other matter you want to explain**
     - Cumplimiento de la norma **IATA Resolution 753**.
-    - Gestión de itinerarios multi-escala (ej. Barcelona -> Berlín -> Australia).
+    - Gestión de itinerarios multi-escala (ej. Barcelona → Berlín → Australia).
 11. **Section 8: Results and Proof of Results**
     - Métricas de latencia de lectura, tiempo de respuesta a la nube y precisión de conteo (100%).
 12. **Section 9: Conclusions**

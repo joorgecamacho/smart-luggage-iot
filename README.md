@@ -4,15 +4,15 @@
 **Institution**: Universitat Pompeu Fabra (UPF), Barcelona, Spain  
 **Department**: Department of Information and Communication Technologies (DTIC)  
 **Team Members**:
-- Jorge Camacho Camacho (`jorge.camacho01@estudiant.upf.edu`)
-- Teammate 2
-- Teammate 3
+- Oscar Salueña Pujolràs (NIA: 285547)
+- Jorge Camacho Camacho (NIA: 266986) - `jorge.camacho01@estudiant.upf.edu`
+- Miguel Rando Ramirez (NIA: 253182)
 
 ---
 
 ## 📌 1. Project Overview & Motivation
 
-Mishandled and misrouted passenger baggage remains one of commercial aviation's most persistent and expensive logistical problems. In multi-leg itineraries with airline changes (for instance, flying *Barcelona $\rightarrow$ Berlin $\rightarrow$ Australia* across different partner carriers), baggage transfer relies on fragile inter-airline handovers where bags often fail to reach the correct aircraft hold.
+Mishandled and misrouted passenger baggage remains one of commercial aviation's most persistent and expensive logistical problems. In multi-leg itineraries with airline changes (for instance, flying *Barcelona → Berlin → Australia* across different partner carriers), baggage transfer relies on fragile inter-airline handovers where bags often fail to reach the correct aircraft hold.
 
 Simultaneously, at the aircraft cargo door, ramp ground crews currently perform manual or optical barcode counts to reconcile checked bags against passenger boarding manifests (e.g., checking that all 200 checked-in bags are physically inside the hold before takeoff). If one bag is missing (199/200), locating the discrepancy causes flight delays and human errors.
 
@@ -36,41 +36,7 @@ Simultaneously, at the aircraft cargo door, ramp ground crews currently perform 
 
 ## 🏗️ 3. System Architecture
 
-```text
-  +-------------------------------------------------------------------------+
-  |                          EDGE HARDWARE (ESP32-S2)                       |
-  |                                                                         |
-  |   +-------------------+    SPI    +---------------------------------+   |
-  |   | RC522 RFID Reader | --------> |        ESP32-S2 SoC             |   |
-  |   | (13.56 MHz)       |           |   (Xtensa 32-bit, 240 MHz)      |   |
-  |   +-------------------+           +---------------------------------+   |
-  |                                        |                  |             |
-  |   +-------------------+                | GPIO             | ADC         |
-  |   | Multi-Color LEDs  | <--------------+                  |             |
-  |   | (Green/Red/Blue)  |                                   |             |
-  |   +-------------------+                                   v             |
-  |                                                  +--------------------+ |
-  |                                                  | Potentiometers (x2)| |
-  |                                                  | Conveyor & Hatch   | |
-  |                                                  +--------------------+ |
-  +-------------------------------------------------------------------------+
-                                       |
-                            Wi-Fi 802.11 b/g/n
-                            MQTT over TLS (8883)
-                                       |
-                                       v
-  +-------------------------------------------------------------------------+
-  |                         CLOUD IOT PLATFORM                              |
-  |                                                                         |
-  |   +--------------------+     +-------------------+     +------------+   |
-  |   | MQTT Broker        | <-> | Airline Hold      | <-> | Passenger  |   |
-  |   | (Telemetry Engine) |     | Reconciliation Hub|     | App Portal |   |
-  |   +--------------------+     +-------------------+     +------------+   |
-  |                                                                         |
-  |   • Pub: aerotrack/esp32/luggage/scan (UID, Speed, Door, Status)        |
-  |   • Sub: aerotrack/esp32/commands (Lock hold, sync manifest)            |
-  +-------------------------------------------------------------------------+
-```
+*(A definir y diseñar por el equipo: dispositivos, servicios cloud, módulos de software...)*
 
 ---
 
@@ -91,7 +57,7 @@ The technical report follows the **IEEE Conference Template (`IEEEtran.cls`)** a
 
 ### 🚀 How to Open in Overleaf
 1. Download or locate **`paper.zip`** in this repository.
-2. In [Overleaf](https://www.overleaf.com/), click **New Project** ➡️ **Upload Project**.
+2. In [Overleaf](https://www.overleaf.com/), click **New Project** → **Upload Project**.
 3. Drag & drop `paper.zip`. Overleaf will unpack all sources and figures and compile immediately.
 4. For detailed collaboration guidelines, see [OVERLEAF_GUIDE.md](OVERLEAF_GUIDE.md).
 
@@ -113,7 +79,6 @@ smart-luggage-iot/
 │   ├── Makefile                   # Local PDF compilation script
 │   ├── paper.zip                  # Mirror of the Overleaf upload bundle
 │   └── figures/                   # High-resolution diagrams (PDF & PNG)
-│       ├── fig1_system_architecture.pdf / .png
 │       ├── fig2_app_flowchart.pdf / .png
 │       └── fig3_state_machine.pdf / .png
 ├── docs/                          # Additional project specifications & documentation
@@ -125,9 +90,10 @@ smart-luggage-iot/
 
 ## 👥 6. Team & Deliverables Roadmap
 
-- [x] System design & concept definition
-- [x] IEEE LaTeX Technical Report structure & figures (`paper/`)
+- [x] Initial repository setup & requirements alignment
+- [x] IEEE LaTeX Technical Report structure & section templates (`paper/`)
 - [x] Overleaf integration bundle & workflow guide (`OVERLEAF_GUIDE.md`)
+- [ ] System architecture design (devices, cloud services, software modules)
 - [ ] ESP32-S2 RC522 RFID reader SPI driver & debouncer
 - [ ] Potentiometer ADC sampling & moving average filter
 - [ ] Multi-color LED signaling state machine
