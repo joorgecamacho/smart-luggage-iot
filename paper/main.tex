@@ -10,8 +10,14 @@
 
 \begin{document}
 
-\title{Final technical report: AeroTrack IoT}
+% =========================================================================
+% TÍTULO DEL INFORME TÉCNICO
+% =========================================================================
+\title{Final technical report: AeroTrack IoT\\Smart RFID Baggage Tracking and Cargo Hold Reconciliation System}
 
+% =========================================================================
+% AUTORES DEL EQUIPO (UPF)
+% =========================================================================
 \author{
     \IEEEauthorblockN{Oscar Salueña Pujolràs}
     \IEEEauthorblockA{\textit{NIA: 285547} \\
@@ -37,26 +43,178 @@
 
 \maketitle
 
+% =========================================================================
+% ABSTRACT
+% =========================================================================
+\begin{abstract}
+% GUÍA / TODO:
+% Breve resumen ejecutivo del proyecto (1 párrafo de ~100-150 palabras):
+% 1. Problema: Pérdida y falta de trazabilidad de equipaje en vuelos con escalas, y lentitud en el conteo manual a la entrada de bodega.
+% 2. Solución: Sistema IoT con ESP32-S2 y RFID que automatiza la reconciliación del manifiesto de bodega y notifica al pasajero.
+% 3. Metodología: Lectura RFID, sensores analógicos (potenciómetros), señalización visual (LEDs) y conexión bidireccional MQTT con Cloud IoT.
+% 4. Resultado principal: Detección instantánea de maletas erróneas y actualización en tiempo real de bodega sin conteo manual.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Internet of Things, ESP32-S2, RFID, Baggage Tracking, Cargo Hold, MQTT, FreeRTOS, IATA Resolution 753.
+\end{IEEEkeywords}
+
+% =========================================================================
+% 1. SYSTEM ARCHITECTURE
+% =========================================================================
 \section{System Architecture (devices, cloud services, software modules...)}
+% GUÍA / TODO:
+% En esta sección explicaréis la arquitectura completa de vuestro sistema basándoos en el diagrama:
+%
+% 1. Devices (Hardware):
+%    - Placa de desarrollo: Espressif ESP32-S2-DevKitM-1 (módulo ESP32-S2-MINI-1, Xtensa 32-bit).
+%    - Lector RFID: Módulo RC522 (13.56 MHz, ISO 14443A) conectado por bus SPI (SCK, MISO, MOSI, SDA, RST).
+%    - Etiquetas RFID: Pegatinas / tags adhesivos adheridos a las maletas con UID único.
+%    - Sensores analógicos: Potenciómetro 1 (velocidad de cinta) y Potenciómetro 2 (ángulo de compuerta) en ADC1 (GPIO1, GPIO2).
+%    - Actuadores: LED RGB (WS2812 integrado en GPIO 18 o LEDs externos) para feedback visual al mozo de pista.
+%
+% 2. Cloud services (Nube):
+%    - Plataforma Cloud IoT elegida (Azure IoT Hub F1 / AWS IoT Core / HiveMQ / broker MQTT).
+%    - Pasarela de ingestión y base de datos con el manifiesto de vuelo.
+%    - Servicios de lógica de negocio (contador en tiempo real, reconciliación y alertas).
+%
+% 3. Software modules (Arquitectura Firmware en ESP-IDF / FreeRTOS):
+%    - Tareas concurrentes: task_scanner_rfid, task_telemetry, task_cloud_MQTT, task_feedback_led.
+%    - Mecanismos de comunicación inter-tarea mediante colas de FreeRTOS (xQueueLuggageEvent, xQueueTelemetry).
+%
+% Descomentar y ajustar para insertar vuestro diagrama:
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=\linewidth]{figures/fig1_system_architecture.pdf}
+%     \caption{Total System Architecture: Real World Environment, Edge Hardware, and Cloud Services \& UI.}
+%     \label{fig:architecture}
+% \end{figure}
 
+% =========================================================================
+% 2. APP DESIGN
+% =========================================================================
 \section{App design (flow diagrams, etc.)}
+% GUÍA / TODO:
+% 1. Diagramas de flujo (Flowcharts):
+%    - Ciclo de vida completo del escaneo:
+%      Maleta en cinta -> Lectura RFID -> Comprobación con manifiesto de vuelo:
+%      a) Si Coincide: Suma al contador de bodega (ej. 199/200), LED Verde, notificación de confirmación al pasajero.
+%      b) Si NO Coincide (maleta ajena/desvío): Alerta, LED Rojo, aviso al operario de pista para apartarla.
+%      c) Al cerrar compuerta (P2): Si cargadas < esperadas, alarma de equipaje faltante.
+%
+% 2. Máquina de estados finitos (FSM) del ESP32-S2:
+%    - Estados: BOOT -> IDLE_MONITORING -> TAG_DETECTED -> VALIDATING -> LOAD_ACCEPTED / ALERT.
+%
+% 3. Diseño de las interfaces de usuario (UI):
+%    - Dashboard de la aerolínea / operario de rampa: visualización del aforo de bodega en tiempo real.
+%    - App / portal del pasajero: estado de su maleta en cada escala del viaje.
+%
+% Descomentar para incluir diagramas:
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=0.92\linewidth]{figures/fig2_app_flowchart.pdf}
+%     \caption{Flow diagram of the automated cargo reconciliation lifecycle.}
+%     \label{fig:flowchart}
+% \end{figure}
 
+% =========================================================================
+% 3. PROTOCOL DESCRIPTION
+% =========================================================================
 \section{Protocol description (sensor readings sent to the cloud, commands received from the cloud...)}
+% GUÍA / TODO:
+% 1. Protocolo de comunicación:
+%    - MQTT sobre TLS (puerto 8883 / 1883) con QoS 1 (entrega garantizada).
+%    - Justificación de MQTT frente a HTTP para sistemas IoT embebidos.
+%
+% 2. Lecturas enviadas a la nube (Uplink / Telemetría):
+%    - Tópico: aerotrack/esp32/luggage/scan (envío de UID leído, timestamp, velocidad de cinta).
+%    - Tópico: aerotrack/esp32/telemetry (latido periódico con valores ADC, RSSI Wi-Fi y memoria libre).
+%    - Detallar ejemplos de payload en formato JSON.
+%
+% 3. Comandos recibidos de la nube (Downlink / Control):
+%    - Tópico: aerotrack/esp32/commands
+%    - Comandos remotos soportados: COMMAND_HOLD_LOCK (cierre de bodega), COMMAND_SYNC_MANIFEST, override de LEDs.
 
+% =========================================================================
+% 4. CODE DESCRIPTION
+% =========================================================================
 \section{Code description}
+% GUÍA / TODO:
+% 1. Estructura modular del proyecto en ESP-IDF v6.1:
+%    - Separación en módulos limpios dentro de main/ y components/:
+%      * rfid_module.c/.h: Inicialización del bus SPI y controlador del RC522.
+%      * telemetry_module.c/.h: Lectura y calibración del ADC One-shot para los potenciómetros.
+%      * mqtt_client_module.c/.h: Manejador del cliente esp_mqtt_client, suscripciones y callbacks.
+%      * led_actuator_module.c/.h: Control del LED WS2812 mediante el periférico RMT.
+% 2. Detalle de funciones clave y sincronización FreeRTOS (colas xQueueSend / xQueueReceive, mutexes, timers de debounce).
 
+% =========================================================================
+% 5. DEMO
+% =========================================================================
 \section{Demo}
+% GUÍA / TODO:
+% Explicación del guion de la demostración práctica que presentaréis en la entrega:
+% 1. Setup inicial: Encendido de la placa, conexión a la red Wi-Fi y confirmación de enlace MQTT (LED azul / heartbeat).
+% 2. Escaneo de maleta correcta: Pase de etiqueta autorizada -> LED Verde se enciende -> El contador del dashboard sube a tiempo real (ej. 199/200).
+% 3. Escaneo de maleta incorrecta: Pase de etiqueta no asignada al vuelo -> LED Rojo parpadea -> Salta aviso de maleta descarriada en el panel.
+% 4. Manipulación de potenciómetros:
+%    - Girar potenciómetro 1: Demostrar que el dashboard refleja el cambio de velocidad de la cinta.
+%    - Girar potenciómetro 2: Simular el cierre de compuerta y disparo del balance final de maletas.
 
+% =========================================================================
+% 6. ISSUES AND SOLUTIONS
+% =========================================================================
 \section{Issues and solutions}
+% GUÍA / TODO:
+% Problemas técnicos que hayan surgido durante el desarrollo y cómo los resolvisteis:
+% - Detección múltiple / rebotes del lector RFID al dejar la etiqueta encima (solución: cooldown / debouncing por software de 2 segundos).
+% - No linealidad en los extremos del ADC del ESP32-S2 (solución: calibración con esp_adc_cali).
+% - Pérdida de paquetes o caídas de conexión Wi-Fi (solución: reconexión automática en FreeRTOS y QoS 1 en MQTT).
+% - Compatibilidad de pines SPI y conflicto con el LED WS2812 de GPIO 18 (solución: remapeo de pines con la GPIO Matrix del ESP32-S2).
 
+% =========================================================================
+% 7. ANY OTHER MATTER YOU WANT TO EXPLAIN
+% =========================================================================
 \section{Any other matter you want to explain}
+% GUÍA / TODO:
+% Temas adicionales para aportar valor y contexto profesional:
+% 1. Normativa aeronáutica: IATA Resolution 753 (obligatoriedad de trazabilidad de equipaje en la industria aérea).
+% 2. Escenario de vuelos con escalas y cambio de compañía: Explicar cómo el sistema resuelve la angustia del pasajero
+%    en trayectos largos (ej. Barcelona -> Berlín -> Australia) asegurando que la maleta se transfirió al segundo avión.
+% 3. Seguridad y privacidad: Consideraciones sobre el cifrado de UIDs para evitar clonación o rastreo no autorizado.
 
+% =========================================================================
+% 8. RESULTS AND PROOF OF RESULTS
+% =========================================================================
 \section{Results and Proof of Results}
+% GUÍA / TODO:
+% Pruebas de funcionamiento y métricas empíricas obtenidas:
+% 1. Métricas de rendimiento:
+%    - Tiempo medio de lectura del tag RFID (ms).
+%    - Latencia de transmisión MQTT extremo a extremo (desde el escaneo físico hasta que se refleja en la web).
+% 2. Pruebas de estrés y fiabilidad:
+%    - Tasa de acierto del conteo de maletas (% de tags detectados sin pérdidas).
+% 3. Evidencias visuales:
+%    - Capturas del dashboard cloud funcionando en vivo.
+%    - Fotografías del montaje físico con la placa, lector y potenciómetros.
 
+% =========================================================================
+% 9. REFERENCES
+% =========================================================================
 \section{References}
+% GUÍA / TODO:
+% Las referencias se gestionan automáticamente desde el archivo references.bib.
+% Para citar en el texto usad \cite{clave}, por ejemplo: \cite{iata753}, \cite{mqtt_spec}.
 \bibliographystyle{IEEEtran}
 \bibliography{references}
 
+% =========================================================================
+% 10. CONCLUSIONS
+% =========================================================================
 \section{Conclusions}
+% GUÍA / TODO:
+% 1. Resumen de lo logrado frente a los objetivos y requisitos planteados por la asignatura.
+% 2. Valoración del uso del ESP32-S2 bajo FreeRTOS y protocolo MQTT para aplicaciones IoT de misión crítica.
+% 3. Trabajo futuro y posibles mejoras (ej. uso de RFID UHF de largo alcance, integración con blockchain para alianzas aéreas, etc.).
 
 \end{document}
