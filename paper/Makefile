@@ -3,7 +3,7 @@ TARGET = main
 
 all: $(TARGET).pdf
 
-$(TARGET).pdf: $(TARGET).tex references.bib IEEEtran.cls figures/fig2_app_flowchart.pdf figures/fig3_state_machine.pdf
+$(TARGET).pdf: $(TARGET).tex references.bib IEEEtran.cls figures/fig1_system_architecture.pdf figures/fig2_app_flowchart.pdf figures/fig3_state_machine.pdf
 	pdflatex $(TARGET)
 	bibtex $(TARGET)
 	pdflatex $(TARGET)

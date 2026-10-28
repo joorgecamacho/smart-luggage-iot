@@ -65,11 +65,19 @@ Internet of Things, ESP32-S2, RFID, Baggage Tracking, Airline Cargo Hold, MQTT, 
 % SECTION 1: SYSTEM ARCHITECTURE
 % =========================================================================
 \section{System Architecture (devices, cloud services, software modules...)}
-% TODO: A redactar y diseñar por el equipo (Oscar Saluena, Jorge Camacho, Miguel Rando).
-% En este apartado definireis la arquitectura de vuestro sistema:
-% 1. Dispositivos (devices): microcontrolador ESP32-S2, lector RFID RC522, conexionado y pines, LEDs, potenciometros.
-% 2. Servicios cloud (cloud services): broker MQTT, plataforma Cloud IoT (Adafruit IO / ThingsBoard / AWS IoT), almacenamiento y dashboards.
-% 3. Modulos de software (software modules): estructura de la arquitectura firmware, hilos/tareas asincronas, microservicios backend y APIs.
+The overall architecture of the AeroTrack IoT system is structured into three main blocks, as shown in Fig.~\ref{fig:architecture}: Real World Environment (cargo door, conveyor belt, smart luggage RFID tags, and visual ground feedback), Edge Hardware (ESP32-S2-DevKitM-1, RFID reader, and FreeRTOS firmware tasks), and Cloud Services and UI (MQTT ingestion, processing \& storage, and customer/airline dashboards).
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/fig1_system_architecture.pdf}
+    \caption{Total System Architecture: Real World Environment, Edge Hardware (ESP32-S2), and Cloud Services \& UI.}
+    \label{fig:architecture}
+\end{figure}
+
+% TODO: A completar y detallar por el equipo:
+% 1. Dispositivos (devices): ESP32-S2-DevKitM-1, lector RFID RC522 por SPI, potenciómetros y LEDs.
+% 2. Servicios cloud (cloud services): broker MQTT, capa de procesamiento y base de datos.
+% 3. Módulos de software (software modules): tareas de FreeRTOS y colas inter-tarea.
 
 % =========================================================================
 % SECTION 2: APP DESIGN
