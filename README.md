@@ -1,0 +1,137 @@
+# AeroTrack IoT: Smart RFID Baggage Tracking & Cargo Hold Reconciliation System
+
+**Course**: Internet of Things (IoT) — Final Project (4th Course, 2026–2027)  
+**Institution**: Universitat Pompeu Fabra (UPF), Barcelona, Spain  
+**Department**: Department of Information and Communication Technologies (DTIC)  
+**Team Members**:
+- Jorge Camacho Camacho (`jorge.camacho01@estudiant.upf.edu`)
+- Teammate 2
+- Teammate 3
+
+---
+
+## 📌 1. Project Overview & Motivation
+
+Mishandled and misrouted passenger baggage remains one of commercial aviation's most persistent and expensive logistical problems. In multi-leg itineraries with airline changes (for instance, flying *Barcelona $\rightarrow$ Berlin $\rightarrow$ Australia* across different partner carriers), baggage transfer relies on fragile inter-airline handovers where bags often fail to reach the correct aircraft hold.
+
+Simultaneously, at the aircraft cargo door, ramp ground crews currently perform manual or optical barcode counts to reconcile checked bags against passenger boarding manifests (e.g., checking that all 200 checked-in bags are physically inside the hold before takeoff). If one bag is missing (199/200), locating the discrepancy causes flight delays and human errors.
+
+### The AeroTrack Solution
+**AeroTrack IoT** simulates an automated, edge-to-cloud smart luggage management system using an **ESP32-S2** development board and high-frequency **RFID (RC522)**:
+1. **Passenger Transparency**: Reassures the passenger via real-time cloud updates as soon as their specific tag is scanned inside the aircraft cargo hold, tracking multi-leg transit transfers.
+2. **Autonomous Airline Reconciliation**: Automatically counts and tallies bags as they pass through the cargo hold conveyor belt. If 200 bags were checked in, the system maintains a live hold counter (e.g., *199/200 loaded, 1 missing*) without manual counting, immediately flagging missing or misrouted luggage.
+
+---
+
+## 🎯 2. Course Requirements Compliance
+
+| Requirement | Implementation in AeroTrack IoT |
+| :--- | :--- |
+| **1. Connect to Cloud IoT** | Bi-directional MQTT over Wi-Fi (Adafruit IO / ThingsBoard). Publishes live scan events, telemetry, and hold counts; receives cloud commands (`SYNC_MANIFEST`, `HOLD_LOCK`). |
+| **2. Signal Results via LEDs** | Multi-color LED signaling: **Green** (bag validly loaded into hold, manifest +1), **Red** (misrouted/unregistered tag alert), **Blue** (cloud connection & idle heartbeat). |
+| **3. Obtain Data via Multiple Sensors / Potentiometers** | Linear potentiometers sampled by ESP32-S2 13-bit SAR ADC, simulating **conveyor belt speed** and **cargo hold hatch angle/closure threshold**. |
+| **4. Deliverables** | • **Demo**: Live hardware demonstration with RFID tags, LEDs, potentiometers, and Cloud IoT dashboard.<br>• **Slides**: Presentation slides.<br>• **Source Code**: ESP32-S2 firmware and cloud microservice.<br>• **Technical Report**: IEEE-format paper edited in Overleaf. |
+
+---
+
+## 🏗️ 3. System Architecture
+
+```text
+  +-------------------------------------------------------------------------+
+  |                          EDGE HARDWARE (ESP32-S2)                       |
+  |                                                                         |
+  |   +-------------------+    SPI    +---------------------------------+   |
+  |   | RC522 RFID Reader | --------> |        ESP32-S2 SoC             |   |
+  |   | (13.56 MHz)       |           |   (Xtensa 32-bit, 240 MHz)      |   |
+  |   +-------------------+           +---------------------------------+   |
+  |                                        |                  |             |
+  |   +-------------------+                | GPIO             | ADC         |
+  |   | Multi-Color LEDs  | <--------------+                  |             |
+  |   | (Green/Red/Blue)  |                                   |             |
+  |   +-------------------+                                   v             |
+  |                                                  +--------------------+ |
+  |                                                  | Potentiometers (x2)| |
+  |                                                  | Conveyor & Hatch   | |
+  |                                                  +--------------------+ |
+  +-------------------------------------------------------------------------+
+                                       |
+                            Wi-Fi 802.11 b/g/n
+                            MQTT over TLS (8883)
+                                       |
+                                       v
+  +-------------------------------------------------------------------------+
+  |                         CLOUD IOT PLATFORM                              |
+  |                                                                         |
+  |   +--------------------+     +-------------------+     +------------+   |
+  |   | MQTT Broker        | <-> | Airline Hold      | <-> | Passenger  |   |
+  |   | (Telemetry Engine) |     | Reconciliation Hub|     | App Portal |   |
+  |   +--------------------+     +-------------------+     +------------+   |
+  |                                                                         |
+  |   • Pub: aerotrack/esp32/luggage/scan (UID, Speed, Door, Status)        |
+  |   • Sub: aerotrack/esp32/commands (Lock hold, sync manifest)            |
+  +-------------------------------------------------------------------------+
+```
+
+---
+
+## 📄 4. Technical Report (Overleaf Ready)
+
+The technical report follows the **IEEE Conference Template (`IEEEtran.cls`)** and includes all sections specified in the course guidelines:
+
+- `System Architecture (devices, cloud services, software modules...)`
+- `App design (flow diagrams, etc.)`
+- `Protocol description (sensor readings sent to the cloud, commands received from the cloud...)`
+- `Code description`
+- `Demo`
+- `Issues and solutions`
+- `Any other matter you want to explain` (IATA Resolution 753 compliance & multi-leg flight transfers)
+- `Results and Proof of Results`
+- `References`
+- `Conclusions`
+
+### 🚀 How to Open in Overleaf
+1. Download or locate **`paper.zip`** in this repository.
+2. In [Overleaf](https://www.overleaf.com/), click **New Project** ➡️ **Upload Project**.
+3. Drag & drop `paper.zip`. Overleaf will unpack all sources and figures and compile immediately.
+4. For detailed collaboration guidelines, see [OVERLEAF_GUIDE.md](OVERLEAF_GUIDE.md).
+
+---
+
+## 📂 5. Repository Structure
+
+```text
+smart-luggage-iot/
+├── README.md                      # Main project documentation (this file)
+├── OVERLEAF_GUIDE.md              # Detailed manual for team collaboration in Overleaf
+├── paper.zip                      # Standalone Overleaf compilation package
+├── .gitignore                     # Git ignore rules for embedded, python, LaTeX & OS
+├── paper/                         # Full LaTeX paper source directory
+│   ├── IEEEtran.cls               # IEEE official conference document class
+│   ├── main.tex                   # Technical report master file with all required sections
+│   ├── overleaf_workflow_guide.tex # Companion paper on Overleaf collaborative workflows
+│   ├── references.bib             # BibTeX database with IoT, RFID, IATA and MQTT citations
+│   ├── Makefile                   # Local PDF compilation script
+│   ├── paper.zip                  # Mirror of the Overleaf upload bundle
+│   └── figures/                   # High-resolution diagrams (PDF & PNG)
+│       ├── fig1_system_architecture.pdf / .png
+│       ├── fig2_app_flowchart.pdf / .png
+│       └── fig3_state_machine.pdf / .png
+├── docs/                          # Additional project specifications & documentation
+└── src/                           # Source code folder (ready for ESP32 firmware & cloud integration)
+    └── .gitkeep
+```
+
+---
+
+## 👥 6. Team & Deliverables Roadmap
+
+- [x] System design & concept definition
+- [x] IEEE LaTeX Technical Report structure & figures (`paper/`)
+- [x] Overleaf integration bundle & workflow guide (`OVERLEAF_GUIDE.md`)
+- [ ] ESP32-S2 RC522 RFID reader SPI driver & debouncer
+- [ ] Potentiometer ADC sampling & moving average filter
+- [ ] Multi-color LED signaling state machine
+- [ ] Wi-Fi & MQTT cloud connectivity (Pub/Sub)
+- [ ] Cloud IoT dashboard setup (Adafruit IO / ThingsBoard)
+- [ ] Live demo execution & recording
+- [ ] Final slides & presentation

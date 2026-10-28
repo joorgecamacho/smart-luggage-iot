@@ -1,0 +1,96 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{listings}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!10}
+}
+
+\begin{document}
+
+\title{Collaborative LaTeX Authoring and Version Control with Overleaf: A Practical Guide for the SmartLuggage IoT Project}
+
+\author{
+    \IEEEauthorblockN{Jorge Camacho Camacho, Teammate 2, and Teammate 3}
+    \IEEEauthorblockA{\textit{Department of Information and Communication Technologies} \\
+    \textit{Universitat Pompeu Fabra (UPF)}, Barcelona, Spain}
+}
+
+\maketitle
+
+\begin{abstract}
+Writing scientific technical reports for Internet of Things (IoT) systems requires seamless synchronization among multi-author teams, precise mathematical formatting, consistent bibliography referencing, and version-controlled asset pipelines. This document provides a complete guide on utilizing Overleaf in conjunction with GitHub for the \textbf{AeroTrack IoT} project. It details project import workflows, live real-time editing conventions, BibTeX reference management, vector graphics integration, and bi-directional GitHub synchronization.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Overleaf, LaTeX, Collaborative Writing, Git Integration, Technical Report, IEEEtran.
+\end{IEEEkeywords}
+
+\section{Introduction to Overleaf}
+Overleaf is a cloud-based LaTeX collaborative editor that offers real-time Google Docs-style co-authoring while retaining the typesetting power of full TeX Live distributions. For teams of three engineering students, Overleaf eliminates the classic \textit{"it doesn't compile on my machine"} problem, as compiler environments and packages are standardized in the cloud.
+
+\section{Project Import and Setup}
+There are two fast methods to initialize the AeroTrack IoT paper on Overleaf:
+
+\subsection{Method 1: Direct Zip Upload (Fastest, 30 seconds)}
+\begin{enumerate}
+    \item Navigate to your Overleaf dashboard at \url{https://www.overleaf.com}.
+    \item Click on the green \textbf{New Project} button in the top left.
+    \item Select \textbf{Upload Project}.
+    \item Drag and drop the \texttt{paper.zip} file from this repository.
+    \item Overleaf will unpack all files (\texttt{main.tex}, \texttt{IEEEtran.cls}, \texttt{references.bib}, and the \texttt{figures/} folder) and immediately compile the document.
+\end{enumerate}
+
+\subsection{Method 2: Direct GitHub Synchronization}
+If you have an Overleaf account linked to GitHub:
+\begin{enumerate}
+    \item In Overleaf, click \textbf{New Project} $\rightarrow$ \textbf{Import from GitHub}.
+    \item Choose the repository: \texttt{joorgecamacho/smart-luggage-iot}.
+    \item Overleaf creates a connected clone. Every push to GitHub can be pulled into Overleaf, and edits made in Overleaf can be committed directly to GitHub via Overleaf's \textbf{Git} menu.
+\end{enumerate}
+
+\section{Repository Structure Explained}
+The paper repository is organized according to academic best practices:
+\begin{itemize}
+    \item \texttt{IEEEtran.cls}: Official IEEE conference LaTeX document class defining two-column typography, margins, and header styles.
+    \item \texttt{main.tex}: Master document containing all mandatory report sections matching the project evaluation rubric.
+    \item \texttt{references.bib}: BibTeX database storing structured citations for papers, RFCs, and hardware datasheets.
+    \item \texttt{figures/}: High-resolution vector PDF and PNG diagrams. Always reference figures with relative paths (e.g., \texttt{figures/fig1\_system\_architecture.pdf}).
+\end{itemize}
+
+\section{Collaborative Workflow Rules}
+To ensure efficient pair writing among the three team members:
+\begin{enumerate}
+    \item \textbf{Section Ownership}: Divide sections by expertise (e.g., Author 1: System Architecture and Protocol; Author 2: App Design and State Machine; Author 3: Demo, Code, and Results).
+    \item \textbf{Review Mode}: Use Overleaf's \textit{Track Changes} and \textit{Comments} features on the right-hand margin to discuss revisions without deleting text prematurely.
+    \item \textbf{Citations}: Never hardcode numeric citation brackets \texttt{[1]}. Always insert citations using \texttt{\textbackslash cite\{bibkey\}}, referencing entries defined in \texttt{references.bib}.
+    \item \textbf{Cross-referencing}: Reference figures, tables, and sections dynamically using \texttt{\textbackslash ref\{fig:label\}} and \texttt{\textbackslash pageref\{...\}}.
+\end{enumerate}
+
+\section{Handling LaTeX Errors and Compilation}
+Overleaf provides instant syntax highlighting. Common pitfalls and solutions include:
+\begin{itemize}
+    \item \textit{Special characters}: Symbols like \texttt{\%}, \texttt{\&}, \texttt{\_}, and \texttt{\$} must be escaped (\texttt{\textbackslash\%}, \texttt{\textbackslash\_}) unless inside math mode or listings.
+    \item \textit{Missing package errors}: All common packages (\texttt{amsmath}, \texttt{graphicx}, \texttt{booktabs}, \texttt{listings}) are pre-loaded in \texttt{main.tex}.
+    \item \textit{Cache clearing}: If compilation behaves unexpectedly after file renames, click the small trash icon next to \textit{Recompile} to clear cached auxiliary files.
+\end{itemize}
+
+\section{Exporting the Final Deliverable}
+Once finalized:
+\begin{enumerate}
+    \item Click the \textbf{Download PDF} button next to the preview pane.
+    \item Ensure the generated PDF matches the course page length and layout constraints.
+    \item Commit your updated \texttt{main.tex} back to the GitHub repository.
+\end{enumerate}
+
+\end{document}
