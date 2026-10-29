@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "author": "AeroTrack IoT Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s2-devkitm-1",
+      "id": "esp",
+      "top": 50,
+      "left": 40,
+      "attrs": { "builder": "esp-idf" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_belt",
+      "top": -70,
+      "left": -160,
+      "attrs": { "label": "P1: Belt Speed" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_door",
+      "top": 80,
+      "left": -160,
+      "attrs": { "label": "P2: Cargo Door" }
+    },
+    {
+      "type": "board-mfrc522",
+      "id": "rfid",
+      "top": 240,
+      "left": -180,
+      "attrs": { "uid": "11:22:33:44" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_green",
+      "top": -60,
+      "left": 280,
+      "attrs": { "color": "green", "label": "Valid Bag Loaded" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_green",
+      "top": -20,
+      "left": 270,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_red",
+      "top": 80,
+      "left": 280,
+      "attrs": { "color": "red", "label": "Misrouted Alert" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_red",
+      "top": 120,
+      "left": 270,
+      "attrs": { "value": "220" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+
+    [ "pot_belt:VCC", "esp:3V3", "red", [ "v0" ] ],
+    [ "pot_belt:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "pot_belt:SIG", "esp:1", "blue", [ "v0" ] ],
+
+    [ "pot_door:VCC", "esp:3V3", "red", [ "v0" ] ],
+    [ "pot_door:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "pot_door:SIG", "esp:2", "blue", [ "v0" ] ],
+
+    [ "rfid:3.3V", "esp:3V3", "red", [ "v0" ] ],
+    [ "rfid:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "rfid:RST", "esp:33", "gray", [ "v0" ] ],
+    [ "rfid:SDA", "esp:34", "yellow", [ "v0" ] ],
+    [ "rfid:MOSI", "esp:35", "purple", [ "v0" ] ],
+    [ "rfid:SCK", "esp:36", "brown", [ "v0" ] ],
+    [ "rfid:MISO", "esp:37", "white", [ "v0" ] ],
+
+    [ "esp:16", "led_green:A", "green", [ "v0" ] ],
+    [ "led_green:C", "r_green:1", "green", [ "v0" ] ],
+    [ "r_green:2", "esp:GND.2", "black", [ "v0" ] ],
+
+    [ "esp:17", "led_red:A", "red", [ "v0" ] ],
+    [ "led_red:C", "r_red:1", "red", [ "v0" ] ],
+    [ "r_red:2", "esp:GND.2", "black", [ "v0" ] ]
+  ],
+  "dependencies": {},
+  "serialMonitor": {
+    "display": "always"
+  }
+}

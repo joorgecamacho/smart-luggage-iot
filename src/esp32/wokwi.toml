@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = "build/aerotrack-iot-esp32.bin"
+elf = "build/aerotrack-iot-esp32.elf"
