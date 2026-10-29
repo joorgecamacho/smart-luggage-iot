@@ -36,7 +36,24 @@ Simultaneously, at the aircraft cargo door, ramp ground crews currently perform 
 
 ## 🏗️ 3. System Architecture
 
-*(A definir y diseñar por el equipo: dispositivos, servicios cloud, módulos de software...)*
+The complete end-to-end architecture is divided into three interconnected layers:
+
+![AeroTrack System Architecture](paper/figures/fig1_system_architecture.png)
+
+1. **Real-World Environment (Aircraft Cargo Bay)**:
+   - Baggage tags equipped with high-frequency passive RFID transponders (13.56 MHz, ISO 14443A).
+   - Cargo hold conveyor belt with variable ingestion speed.
+   - Cargo hold door angle monitoring with safety interlock threshold.
+2. **Edge Hardware Layer (ESP32-S2 & FreeRTOS)**:
+   - ESP32-S2 DevKitM-1 microcontroller coordinating concurrent FreeRTOS tasks.
+   - MFRC522 RFID reader over native hardware SPI2 (GPIOs 33 to 37).
+   - Dual linear potentiometers sampled via 13-bit ADC1 (GPIO 1: Belt Speed, GPIO 2: Cargo Door).
+   - Status LEDs: Green (valid bag loaded) and Red (misrouted alert / door lock).
+   - FreeRTOS message queues (`xQueueLuggageEvent`) decoupling sensor acquisition from network publishing.
+3. **Cloud Services & Client UI**:
+   - Cloud MQTT broker routing scan events and telemetry over Wi-Fi.
+   - Ramp Operator Dashboard with real-time hold tally reconciliation (e.g., 199/200).
+   - Passenger Mobile Tracking Web App for live baggage notifications during multi-leg transit.
 
 ---
 
