@@ -1,3 +1,26 @@
+/**
+ * @file main.c
+ * @brief AeroTrack IoT - Real-Time Baggage Tracking & Hold Verification System
+ * @target ESP32-S2 DevKitM-1 (ESP-IDF v5.x / FreeRTOS)
+ * 
+ * Hardware Pinout Configuration:
+ *   - RFID Reader (MFRC522 over SPI2 native bus):
+ *       RST:  GPIO 33
+ *       SDA:  GPIO 34 (CS / SS)
+ *       MOSI: GPIO 35
+ *       SCK:  GPIO 36
+ *       MISO: GPIO 37
+ *   - Indicators:
+ *       Green LED: GPIO 16 (Hold load confirmation)
+ *       Red LED:   GPIO 17 (Misrouted security alert)
+ *   - Physical Push-Buttons (Internal Pull-Up):
+ *       Button 1 (Valid Luggage):   GPIO 4 -> GND
+ *       Button 2 (Misrouted Bag):   GPIO 5 -> GND
+ *   - Analog Inputs (ADC1 OneShot):
+ *       Potentiometer 1 (Conveyor Speed): GPIO 1 (ADC1_CHANNEL_0)
+ *       Potentiometer 2 (Cargo Door):     GPIO 2 (ADC1_CHANNEL_1)
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -13,25 +36,29 @@
 #include "esp_adc/adc_oneshot.h"
 
 // =======================================================
-// PINES DE HARDWARE (ESP32-S2 DevKitM-1)
+// HARDWARE PIN DEFINITIONS (ESP32-S2 DevKitM-1)
 // =======================================================
-// Bus SPI2 nativo para MFRC522 (Pines libres de conflicto Flash)
-#define PIN_RC522_RST           33   // Reset
+// Native SPI2 bus for MFRC522 (Flash-safe GPIOs)
+#define PIN_RC522_RST           33   // Reset line
 #define PIN_RC522_SDA           34   // Chip Select (CS / SS)
-#define PIN_RC522_MOSI          35   // MOSI
-#define PIN_RC522_SCK           36   // Clock
-#define PIN_RC522_MISO          37   // MISO
+#define PIN_RC522_MOSI          35   // Master Out Slave In
+#define PIN_RC522_SCK           36   // Serial Clock
+#define PIN_RC522_MISO          37   // Master In Slave Out
 
-// LEDs Indicadores de Estado
-#define PIN_LED_VALID_GREEN     16   // LED Verde: Maleta confirmada
-#define PIN_LED_ALERT_RED       17   // LED Rojo: Alerta maleta desviada
+// Status Indicator LEDs
+#define PIN_LED_VALID_GREEN     16   // Green LED: Luggage load confirmed
+#define PIN_LED_ALERT_RED       17   // Red LED: Misrouted baggage alarm
 
-// Canales ADC1 (Potenciometros)
-#define ADC_CH_BELT_SPEED       ADC_CHANNEL_0  // GPIO 1: Velocidad Cinta
-#define ADC_CH_DOOR_ANGLE       ADC_CHANNEL_1  // GPIO 2: Angulo Compuerta
+// Physical Push-Buttons (with internal pull-up resistors)
+#define PIN_BTN_VALID           4    // Push-button: Valid baggage (Flight IB3166)
+#define PIN_BTN_ROGUE           5    // Push-button: Misrouted baggage (Destination Berlin)
+
+// ADC1 Channels (Potentiometers)
+#define ADC_CH_BELT_SPEED       ADC_CHANNEL_0  // GPIO 1: Conveyor belt speed (0-100%)
+#define ADC_CH_DOOR_ANGLE       ADC_CHANNEL_1  // GPIO 2: Cargo hold door sensor (>70% = closed)
 
 // =======================================================
-// REGISTROS MFRC522 & PROTOCOLO ISO 14443A
+// MFRC522 REGISTERS & ISO 14443A CONSTANTS
 // =======================================================
 #define CommandReg              0x01
 #define ComIEnReg               0x02
@@ -53,7 +80,7 @@
 #define TReloadRegL             0x2D
 #define VersionReg              0x37
 
-// Comandos PCD y PICC
+// PCD and PICC Command Codes
 #define PCD_IDLE                0x00
 #define PCD_TRANSCEIVE          0x0C
 #define PCD_RESETPHASE          0x0F
@@ -66,11 +93,11 @@
 #define MI_NOTAGERR             1
 #define MI_ERR                  2
 
-// Manejadores globales
+// Global Driver Handles
 static spi_device_handle_t spi_rfid_handle;
 static adc_oneshot_unit_handle_t adc1_handle;
 
-// Estructura de eventos de equipaje
+// Luggage Event Data Structure
 typedef enum {
     SCAN_STATUS_VALID,
     SCAN_STATUS_ROGUE
@@ -84,12 +111,13 @@ typedef struct {
     bool is_door_closed;
 } luggage_event_t;
 
+// FreeRTOS Inter-Task Communication
 static QueueHandle_t xQueueLuggageEvent = NULL;
 static int g_hold_loaded_count = 198;
 static const int g_flight_total_expected = 200;
 
 // =======================================================
-// FUNCIONES SPI DE BAJO NIVEL (MFRC522)
+// LOW-LEVEL MFRC522 SPI FUNCTIONS
 // =======================================================
 static void mfrc522_write_reg(uint8_t reg, uint8_t val)
 {
@@ -116,28 +144,28 @@ static uint8_t mfrc522_read_reg(uint8_t reg)
 
 static void mfrc522_init(void)
 {
-    // 1. Reset fisico mediante pin RST (GPIO 33)
+    // 1. Hardware reset using RST pin (GPIO 33)
     gpio_set_direction(PIN_RC522_RST, GPIO_MODE_OUTPUT);
     gpio_set_level(PIN_RC522_RST, 0);
     vTaskDelay(pdMS_TO_TICKS(10));
     gpio_set_level(PIN_RC522_RST, 1);
     vTaskDelay(pdMS_TO_TICKS(50));
 
-    // 2. Soft reset por comando SPI
+    // 2. Soft reset via SPI command
     mfrc522_write_reg(CommandReg, PCD_RESETPHASE);
     vTaskDelay(pdMS_TO_TICKS(50));
 
-    // 3. Temporizador estandar ISO 14443A (25ms timeout para respuesta RF)
-    mfrc522_write_reg(TModeReg, 0x80);      // TAuto=1: inicia automaticamente al finalizar transmision
-    mfrc522_write_reg(TPrescalerReg, 0xA9); // 40 kHz (periodo de 25us)
+    // 3. Configure ISO 14443A standard RF timeout (25 ms response window)
+    mfrc522_write_reg(TModeReg, 0x80);      // TAuto=1: timer starts automatically at end of transmission
+    mfrc522_write_reg(TPrescalerReg, 0xA9); // 40 kHz timer frequency (25 us period)
     mfrc522_write_reg(TReloadRegH, 0x03);   // 0x03E8 = 1000 ticks = 25 ms
     mfrc522_write_reg(TReloadRegL, 0xE8);
 
-    // 4. Modulacion ASK al 100% y presets CRC
+    // 4. 100% ASK modulation & CRC presets
     mfrc522_write_reg(TxASKReg, 0x40);
     mfrc522_write_reg(ModeReg, 0x3D);
 
-    // 5. Encender antenas Tx1 y Tx2
+    // 5. Enable RF transmitter antennas Tx1 and Tx2
     uint8_t tx_ctrl = mfrc522_read_reg(TxControlReg);
     if ((tx_ctrl & 0x03) != 0x03) {
         mfrc522_write_reg(TxControlReg, tx_ctrl | 0x03);
@@ -148,11 +176,11 @@ static uint8_t mfrc522_to_card(uint8_t command, uint8_t *sendData, uint8_t sendL
                                uint8_t *backData, uint8_t *backLen, uint8_t validBits)
 {
     uint8_t status = MI_ERR;
-    uint8_t waitIRq = 0x30; // RxIRq y IdleIRq
+    uint8_t waitIRq = 0x30; // RxIRq and IdleIRq
 
     mfrc522_write_reg(CommandReg, PCD_IDLE);
-    mfrc522_write_reg(ComIrqReg, 0x7F);      // Limpiar los 7 bits de interrupcion
-    mfrc522_write_reg(FIFOLevelReg, 0x80);   // Flush buffer FIFO
+    mfrc522_write_reg(ComIrqReg, 0x7F);      // Clear all 7 interrupt bits
+    mfrc522_write_reg(FIFOLevelReg, 0x80);   // Flush FIFO buffer
 
     for (uint8_t i = 0; i < sendLen; i++) {
         mfrc522_write_reg(FIFODataReg, sendData[i]);
@@ -166,18 +194,17 @@ static uint8_t mfrc522_to_card(uint8_t command, uint8_t *sendData, uint8_t sendL
         mfrc522_write_reg(BitFramingReg, cur | 0x80); // StartSend = 1
     }
 
-    // Esperar respuesta (25000 iteraciones para garantizar margen de tiempo sobre 25ms)
+    // Wait for response with timeout safety margin
     uint32_t i = 25000;
     while (1) {
         uint8_t n = mfrc522_read_reg(ComIrqReg);
         uint8_t fifo_level = mfrc522_read_reg(FIFOLevelReg);
 
-        // Si llego respuesta o hay bytes en el buffer FIFO, consideramos exito
         if ((n & waitIRq) || (fifo_level > 0)) {
             status = MI_OK;
             break;
         }
-        if (n & 0x01) { // Timeout del temporizador sin tag presente
+        if (n & 0x01) { // Timer timeout without PICC response
             status = MI_NOTAGERR;
             break;
         }
@@ -187,7 +214,7 @@ static uint8_t mfrc522_to_card(uint8_t command, uint8_t *sendData, uint8_t sendL
         }
     }
 
-    // Limpiar bit StartSend
+    // Clear StartSend bit
     uint8_t cur = mfrc522_read_reg(BitFramingReg);
     mfrc522_write_reg(BitFramingReg, cur & (~0x80));
 
@@ -228,7 +255,6 @@ static uint8_t mfrc522_request_cmd(uint8_t reqMode, uint8_t *tagType)
 
 static uint8_t mfrc522_request(uint8_t *tagType)
 {
-    // Intenta comando REQA primero (tarjetas idle) y WUPA (tarjetas despiertas o en hold)
     if (mfrc522_request_cmd(PICC_CMD_REQA, tagType) == MI_OK) {
         return MI_OK;
     }
@@ -257,50 +283,28 @@ static void mfrc522_halt(void)
     mfrc522_to_card(PCD_TRANSCEIVE, cmd, 2, NULL, &backLen, 0);
 }
 
+// Print welcome and instruction banner
 static void print_instructions_banner(void)
 {
     printf("\n=======================================================\n");
-    printf("   AEROTRACK IoT - SISTEMA DE MONITOREO DE EQUIPAJE\n");
+    printf("   AEROTRACK IoT - BAGGAGE TRACKING SYSTEM (ESP32-S2)\n");
     printf("=======================================================\n");
-    printf("Metodos de Escaneo Disponibles:\n");
-    printf("  1. Lector MFRC522: Pulsa TAP o activa HOLD en la tarjeta\n");
-    printf("  2. Teclado por Terminal (escribe y pulsa Enter):\n");
-    printf("     [1] o [g] -> Maleta VALIDA   (Green Card: 11-22-33-44)\n");
-    printf("     [2] o [y] -> Maleta DESVIADA (Yellow Card: 55-66-77-88)\n");
-    printf("     [3] o [b] -> Maleta VALIDA   (Blue Card:  01-02-03-04)\n");
-    printf("     [h]       -> Mostrar este menu de ayuda\n");
+    printf("Hardware Inputs Available:\n");
+    printf("  - Button 1 (GPIO 4):  Valid Baggage   (Flight IB3166)\n");
+    printf("  - Button 2 (GPIO 5):  Misrouted Bag   (Destination Berlin)\n");
+    printf("  - Potentiometer P1:   Conveyor speed  (GPIO 1 / ADC1_CH0)\n");
+    printf("  - Potentiometer P2:   Cargo door angle(GPIO 2 / ADC1_CH1)\n");
+    printf("  - MFRC522 RFID:       Native SPI2 bus (GPIOs 33-37)\n");
     printf("-------------------------------------------------------\n");
-    printf("Potenciometros:\n");
-    printf("  P1 (Arriba): Velocidad cinta transportadora (0-100%%)\n");
-    printf("  P2 (Abajo):  Angulo compuerta bodega (>70%% = BLOQUEO)\n");
+    printf("Serial Keyboard Fallback (Press key + Enter):\n");
+    printf("  [1] or [g] -> Valid Baggage   (Tag: 11-22-33-44)\n");
+    printf("  [2] or [y] -> Misrouted Alert (Tag: 55-66-77-88)\n");
+    printf("  [3] or [b] -> Valid Baggage   (Tag: 01-02-03-04)\n");
+    printf("  [h]       -> Show this help banner\n");
     printf("=======================================================\n\n");
 }
 
-// =======================================================
-// TAREAS FREERTOS
-// =======================================================
-
-// Tarea 1: Telemetria de Sensores (Potenciometros ADC1)
-void task_telemetry(void *pvParameters)
-{
-    int raw_speed = 0, raw_door = 0;
-
-    while (1) {
-        adc_oneshot_read(adc1_handle, ADC_CH_BELT_SPEED, &raw_speed);
-        adc_oneshot_read(adc1_handle, ADC_CH_DOOR_ANGLE, &raw_door);
-
-        int speed_pct = (raw_speed * 100) / 8191;
-        int door_pct  = (raw_door * 100) / 8191;
-        const char *door_state = (door_pct > 70) ? "CLOSED" : "OPEN";
-
-        printf("[TELEMETRIA] Cinta: %d%% | Compuerta: %d%% (%s)\n", 
-               speed_pct, door_pct, door_state);
-
-        vTaskDelay(pdMS_TO_TICKS(4000));
-    }
-}
-
-// Despachar evento a la cola
+// Helper: Dispatch luggage event to the processing queue
 static void dispatch_tag_event(const char *uid_str, scan_status_t status)
 {
     int raw_speed = 0, raw_door = 0;
@@ -318,42 +322,101 @@ static void dispatch_tag_event(const char *uid_str, scan_status_t status)
     xQueueSend(xQueueLuggageEvent, &event, portMAX_DELAY);
 }
 
-// Tarea 2: Escaner RFID con Soporte Dual (Hardware MFRC522 + Terminal)
+// =======================================================
+// FREERTOS TASKS
+// =======================================================
+
+/**
+ * @brief Task 1: Periodic Sensor Telemetry
+ * Reads conveyor speed and cargo door sensors via ADC1 every 3 seconds.
+ */
+void task_telemetry(void *pvParameters)
+{
+    int raw_speed = 0, raw_door = 0;
+
+    while (1) {
+        adc_oneshot_read(adc1_handle, ADC_CH_BELT_SPEED, &raw_speed);
+        adc_oneshot_read(adc1_handle, ADC_CH_DOOR_ANGLE, &raw_door);
+
+        int speed_pct = (raw_speed * 100) / 8191;
+        int door_pct  = (raw_door * 100) / 8191;
+        const char *door_state = (door_pct > 70) ? "CLOSED" : "OPEN";
+
+        printf("[TELEMETRY] Conveyor belt: %d%% | Cargo hold: %d/%d bags | Door: %d%% (%s)\n", 
+               speed_pct, g_hold_loaded_count, g_flight_total_expected, door_pct, door_state);
+
+        vTaskDelay(pdMS_TO_TICKS(3000));
+    }
+}
+
+/**
+ * @brief Task 2: Physical Push-Button Scanner
+ * Polls GPIO 4 (Valid Bag) and GPIO 5 (Misrouted Bag) with 400ms software debounce.
+ */
+void task_buttons(void *pvParameters)
+{
+    TickType_t last_press_time = 0;
+    const TickType_t debounce_ticks = pdMS_TO_TICKS(400);
+
+    while (1) {
+        TickType_t now = xTaskGetTickCount();
+
+        // Check Button 1 (Valid Luggage - Flight IB3166)
+        if (gpio_get_level(PIN_BTN_VALID) == 0 && (now - last_press_time > debounce_ticks)) {
+            last_press_time = now;
+            printf("\n>>> [BUTTON] Triggered: Valid Baggage Push-Button (GPIO %d)\n", PIN_BTN_VALID);
+            dispatch_tag_event("11-22-33-44", SCAN_STATUS_VALID);
+        }
+
+        // Check Button 2 (Misrouted Luggage - Destination Berlin)
+        if (gpio_get_level(PIN_BTN_ROGUE) == 0 && (now - last_press_time > debounce_ticks)) {
+            last_press_time = now;
+            printf("\n>>> [BUTTON] Triggered: Misrouted Baggage Push-Button (GPIO %d)\n", PIN_BTN_ROGUE);
+            dispatch_tag_event("55-66-77-88", SCAN_STATUS_ROGUE);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+/**
+ * @brief Task 3: Dual RFID Scanner (Physical MFRC522 + Serial Terminal)
+ */
 void task_scanner_rfid(void *pvParameters)
 {
     uint8_t str[16];
     char last_uid_str[32] = { 0 };
     TickType_t last_scan_time = 0;
 
-    // Configurar STDIN en modo no bloqueante para recibir pulsaciones
+    // Set STDIN to non-blocking mode for interactive keyboard triggers
     int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 
     uint8_t version = mfrc522_read_reg(VersionReg);
-    printf("[RC522 STATUS] Chip Version en SPI: 0x%02X (Correcto si es 0x91 o 0x92)\n", version);
+    printf("[RC522 STATUS] Chip Version on SPI2: 0x%02X (Valid if 0x91 or 0x92)\n", version);
 
     print_instructions_banner();
 
     while (1) {
-        // 1. Escuchar comandos por terminal
+        // 1. Listen for serial keyboard commands
         char input_ch = 0;
         int bytes_read = read(STDIN_FILENO, &input_ch, 1);
         if (bytes_read > 0) {
             if (input_ch == '1' || input_ch == 'g' || input_ch == 'G') {
-                printf("\n>>> [SCANNER] Lectura de Tag RFID: 11-22-33-44 (Vuelo IB3166 - Verde)\n");
+                printf("\n>>> [SERIAL] Tag Simulation: 11-22-33-44 (Flight IB3166 - Valid)\n");
                 dispatch_tag_event("11-22-33-44", SCAN_STATUS_VALID);
             } else if (input_ch == '2' || input_ch == 'y' || input_ch == 'Y') {
-                printf("\n>>> [SCANNER] Lectura de Tag RFID: 55-66-77-88 (DESTINO BERLIN - Amarillo)\n");
+                printf("\n>>> [SERIAL] Tag Simulation: 55-66-77-88 (Destination Berlin - Rogue)\n");
                 dispatch_tag_event("55-66-77-88", SCAN_STATUS_ROGUE);
             } else if (input_ch == '3' || input_ch == 'b' || input_ch == 'B') {
-                printf("\n>>> [SCANNER] Lectura de Tag RFID: 01-02-03-04 (Vuelo IB3166 - Azul)\n");
+                printf("\n>>> [SERIAL] Tag Simulation: 01-02-03-04 (Flight IB3166 - Valid)\n");
                 dispatch_tag_event("01-02-03-04", SCAN_STATUS_VALID);
             } else if (input_ch == 'h' || input_ch == 'H' || input_ch == '?') {
                 print_instructions_banner();
             }
         }
 
-        // 2. Polling del lector fisico MFRC522 por bus SPI
+        // 2. Poll physical MFRC522 RFID reader over SPI2
         if (mfrc522_request(str) == MI_OK) {
             if (mfrc522_anticoll(str) == MI_OK) {
                 char current_uid[32];
@@ -365,7 +428,7 @@ void task_scanner_rfid(void *pvParameters)
                     strcpy(last_uid_str, current_uid);
                     last_scan_time = now;
 
-                    printf("\n>>> [SCANNER] Deteccion fisica en Antena MFRC522! UID: %s\n", current_uid);
+                    printf("\n>>> [RFID ANTENNA] Physical PICC Tag Detected! UID: %s\n", current_uid);
 
                     scan_status_t status = SCAN_STATUS_ROGUE;
                     if ((str[0] == 0x11 && str[1] == 0x22 && str[2] == 0x33 && str[3] == 0x44) ||
@@ -384,14 +447,10 @@ void task_scanner_rfid(void *pvParameters)
     }
 }
 
-void task_feedback_led(void *pvParameters)
-{
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
-
-// Tarea 4: Publicacion de Telemetria y Eventos MQTT
+/**
+ * @brief Task 4: Cloud MQTT Publisher & Safety Interlock Manager
+ * Receives luggage events from queue, drives status LEDs, and outputs MQTT payloads.
+ */
 void task_cloud_MQTT(void *pvParameters)
 {
     luggage_event_t event;
@@ -399,12 +458,12 @@ void task_cloud_MQTT(void *pvParameters)
     while (1) {
         if (xQueueReceive(xQueueLuggageEvent, &event, portMAX_DELAY) == pdTRUE) {
             
-            // Interlock de Seguridad: Compuerta Cerrada
+            // Safety Interlock: Cargo door closed
             if (event.is_door_closed) {
                 printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-                printf("[BLOQUEO DE SEGURIDAD] COMPUERTA CERRADA (%d%%)\n", event.door_angle_pct);
-                printf("No se pueden ingresar maletas con la compuerta de bodega cerrada.\n");
-                printf("Accion de seguridad: Cinta transportadora INHIBIDA.\n");
+                printf("[SAFETY INTERLOCK] CARGO DOOR CLOSED (%d%%)\n", event.door_angle_pct);
+                printf("Warning: Luggage intake prohibited while cargo door is locked.\n");
+                printf("Action: Conveyor belt INHIBITED.\n");
                 printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
                 
                 for (int i = 0; i < 4; i++) {
@@ -419,7 +478,7 @@ void task_cloud_MQTT(void *pvParameters)
             if (event.status == SCAN_STATUS_VALID) {
                 g_hold_loaded_count++;
                 
-                // LED Verde ON durante confirmacion
+                // Green LED ON for confirmation
                 gpio_set_level(PIN_LED_VALID_GREEN, 1);
                 
                 printf("\n=======================================================\n");
@@ -431,7 +490,7 @@ void task_cloud_MQTT(void *pvParameters)
                 printf("  \"hold_tally\": \"%d/%d\",\n", g_hold_loaded_count, g_flight_total_expected);
                 printf("  \"conveyor_speed_pct\": %d,\n", event.conveyor_speed_pct);
                 printf("  \"cargo_door_pct\": %d,\n", event.door_angle_pct);
-                printf("  \"passenger_notification\": \"Maleta cargada en bodega con exito\"\n");
+                printf("  \"passenger_notification\": \"Luggage loaded into hold successfully\"\n");
                 printf("}\n");
                 printf("=======================================================\n\n");
 
@@ -439,19 +498,20 @@ void task_cloud_MQTT(void *pvParameters)
                 gpio_set_level(PIN_LED_VALID_GREEN, 0);
 
             } else {
-                // Alerta de maleta desviada
+                // Misrouted baggage security alert
                 printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                 printf(">>> [MQTT ALERT] Topic: aerotrack/esp32/alerts\n");
                 printf("{\n");
                 printf("  \"flight_id\": \"IB3166\",\n");
                 printf("  \"tag_uid\": \"%s\",\n", event.tag_uid);
                 printf("  \"status\": \"ALERT_MISROUTED\",\n");
-                printf("  \"warning\": \"MALETA NO PERTENECE A ESTE VUELO (Destino Berlin)\",\n");
-                printf("  \"hold_action\": \"DETENER_CINTA\",\n");
+                printf("  \"warning\": \"LUGGAGE NOT ASSIGNED TO THIS FLIGHT (Destination Berlin)\",\n");
+                printf("  \"hold_action\": \"HALT_CONVEYOR\",\n");
                 printf("  \"conveyor_speed_pct\": %d\n", event.conveyor_speed_pct);
                 printf("}\n");
                 printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 
+                // Red LED rapid alert flashing (6 cycles)
                 for (int i = 0; i < 6; i++) {
                     gpio_set_level(PIN_LED_ALERT_RED, 1);
                     vTaskDelay(pdMS_TO_TICKS(150));
@@ -464,25 +524,40 @@ void task_cloud_MQTT(void *pvParameters)
 }
 
 // =======================================================
-// INICIALIZACION DEL SISTEMA
+// SYSTEM INITIALIZATION & MAIN ENTRY POINT
 // =======================================================
 void app_main(void)
 {
-    printf("\nIniciando AeroTrack IoT en ESP32-S2 DevKitM-1...\n");
+    printf("\nStarting AeroTrack IoT Firmware on ESP32-S2 DevKitM-1...\n");
 
-    // 1. Configurar LEDs
-    gpio_config_t io_conf = {
+    // 1. Configure Status Indicator LEDs (Outputs)
+    gpio_config_t led_conf = {
         .pin_bit_mask = (1ULL << PIN_LED_VALID_GREEN) | (1ULL << PIN_LED_ALERT_RED),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
     };
-    gpio_config(&io_conf);
+    gpio_config(&led_conf);
+
+    // Boot LED Self-Test: Turn both LEDs ON for 1.5 seconds to verify polarity & wiring
+    gpio_set_level(PIN_LED_VALID_GREEN, 1);
+    gpio_set_level(PIN_LED_ALERT_RED, 1);
+    vTaskDelay(pdMS_TO_TICKS(1500));
     gpio_set_level(PIN_LED_VALID_GREEN, 0);
     gpio_set_level(PIN_LED_ALERT_RED, 0);
 
-    // 2. Bus SPI2 en ESP32-S2 (GPIOs nativos 33, 34, 35, 36, 37)
+    // 2. Configure Physical Push-Buttons (Inputs with Internal Pull-Ups)
+    gpio_config_t btn_conf = {
+        .pin_bit_mask = (1ULL << PIN_BTN_VALID) | (1ULL << PIN_BTN_ROGUE),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&btn_conf);
+
+    // 3. Configure Native SPI2 Bus on ESP32-S2 (GPIOs 33, 34, 35, 36, 37)
     spi_bus_config_t buscfg = {
         .miso_io_num = PIN_RC522_MISO,
         .mosi_io_num = PIN_RC522_MOSI,
@@ -502,10 +577,10 @@ void app_main(void)
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
     ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &devcfg, &spi_rfid_handle));
 
-    // 3. Inicializar lector MFRC522
+    // 4. Initialize MFRC522 RFID Reader
     mfrc522_init();
 
-    // 4. Configurar ADC1 para Potenciometros (GPIO 1 y GPIO 2)
+    // 5. Configure ADC1 for Analog Potentiometers (GPIO 1 & GPIO 2)
     adc_oneshot_unit_init_cfg_t init_config1 = {
         .unit_id = ADC_UNIT_1,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
@@ -519,12 +594,14 @@ void app_main(void)
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CH_BELT_SPEED, &config));
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CH_DOOR_ANGLE, &config));
 
-    // 5. Cola de eventos FreeRTOS
-    xQueueLuggageEvent = xQueueCreate(5, sizeof(luggage_event_t));
+    // 6. Create FreeRTOS Event Queue
+    xQueueLuggageEvent = xQueueCreate(10, sizeof(luggage_event_t));
 
-    // 6. Iniciar Tareas FreeRTOS
+    // 7. Launch FreeRTOS Tasks
     xTaskCreate(task_telemetry,    "task_telemetry",    4096, NULL, 3, NULL);
+    xTaskCreate(task_buttons,      "task_buttons",      2048, NULL, 4, NULL);
     xTaskCreate(task_scanner_rfid, "task_scanner_rfid", 4096, NULL, 5, NULL);
-    xTaskCreate(task_feedback_led, "task_feedback_led", 2048, NULL, 2, NULL);
     xTaskCreate(task_cloud_MQTT,   "task_cloud_MQTT",   4096, NULL, 4, NULL);
+
+    printf("AeroTrack IoT System Initialized Successfully.\n");
 }

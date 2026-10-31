@@ -25,10 +25,24 @@
       "attrs": { "label": "P2: Cargo Door" }
     },
     {
+      "type": "wokwi-pushbutton",
+      "id": "btn_valid",
+      "top": 240,
+      "left": -70,
+      "attrs": { "color": "green", "label": "Valid Bag (GPIO 4)" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_rogue",
+      "top": 330,
+      "left": -70,
+      "attrs": { "color": "red", "label": "Rogue Bag (GPIO 5)" }
+    },
+    {
       "type": "board-mfrc522",
       "id": "rfid",
       "top": 240,
-      "left": -180,
+      "left": -260,
       "attrs": { "uid": "11:22:33:44" }
     },
     {
@@ -71,6 +85,12 @@
     [ "pot_door:VCC", "esp:3V3", "red", [ "v0" ] ],
     [ "pot_door:GND", "esp:GND.1", "black", [ "v0" ] ],
     [ "pot_door:SIG", "esp:2", "blue", [ "v0" ] ],
+
+    [ "btn_valid:1.l", "esp:GND.1", "black", [ "v0" ] ],
+    [ "btn_valid:2.l", "esp:4", "green", [ "v0" ] ],
+
+    [ "btn_rogue:1.l", "esp:GND.1", "black", [ "v0" ] ],
+    [ "btn_rogue:2.l", "esp:5", "red", [ "v0" ] ],
 
     [ "rfid:3.3V", "esp:3V3", "red", [ "v0" ] ],
     [ "rfid:GND", "esp:GND.1", "black", [ "v0" ] ],

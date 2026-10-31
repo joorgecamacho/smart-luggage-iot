@@ -44,3 +44,9 @@ venv/
 .idea/
 *.swp
 *~
+
+# Temporary scratch & build directories
+scratch/
+build/
+sdkconfig
+sdkconfig.old
